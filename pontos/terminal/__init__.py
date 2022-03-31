@@ -27,6 +27,8 @@ __all__ = [
     'ok',
     'out',
     'warning',
+    'set_terminal',
+    'Terminal',
 ]
 
 
@@ -58,8 +60,16 @@ def out(message: str):
     __term.print(message)
 
 
+def indent():
+    __term.indent()
+
+
 def overwrite(message: str, new_line: bool = False):
     __term.print_overwrite(message, new_line=new_line)
+
+
+def set_terminal():
+    _set_terminal(Terminal())
 
 
 def _set_terminal(term: Terminal):
