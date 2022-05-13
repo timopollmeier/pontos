@@ -475,6 +475,10 @@ class UpdateHeaderTestCase(TestCase):
 
         ret = mock_stdout.getvalue()
         self.assertIn(
+            "pontos-update-header",
+            ret,
+        )
+        self.assertIn(
             "Specify files to update!",
             ret,
         )
