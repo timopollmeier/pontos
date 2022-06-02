@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from argparse import Namespace
 import sys
+from argparse import Namespace
 
-import requests
+import httpx
 
 from pontos.github.api import GitHubRESTApi
 from pontos.terminal import error, info, ok, out
@@ -56,7 +56,7 @@ def create_pull_request(args: Namespace):
             title=args.title,
             body=args.body,
         )
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         error(str(e))
         sys.exit(1)
 
@@ -84,7 +84,7 @@ def update_pull_request(args: Namespace):
             title=args.title,
             body=args.body,
         )
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         error(str(e))
         sys.exit(1)
 
@@ -119,7 +119,7 @@ def file_status(args: Namespace):
             if args.output:
                 args.output.write("\n".join(files) + "\n")
 
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         error(str(e))
         sys.exit(1)
 
@@ -143,6 +143,6 @@ def labels(args: Namespace):
 
         git.set_labels(repo=args.repo, issue=args.issue, labels=issue_labels)
 
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         error(str(e))
         sys.exit(1)

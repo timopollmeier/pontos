@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from pathlib import Path
 from contextlib import contextmanager
 from enum import Enum
+from pathlib import Path
 from shutil import get_terminal_size
 from typing import Callable, Generator
 

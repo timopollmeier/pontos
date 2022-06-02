@@ -16,11 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import defaultdict
+from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, Iterable, Iterator, List, Optional
+from typing import Callable, Dict, Generator, Iterable, Iterator, List, Optional
 
-import requests
+import httpx
 
 DEFAULT_GITHUB_API_URL = "https://api.github.com"
 
@@ -81,13 +82,14 @@ class DownloadProgressIterable:
             pass
 
 
+@contextmanager
 def download(
     url: str,
     destination: Optional[Path] = None,
     *,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     timeout: int = DEFAULT_TIMEOUT,
-) -> DownloadProgressIterable:
+) -> Generator[DownloadProgressIterable, None, None]:
     """Download file in url to filename
 
     Arguments:
@@ -107,16 +109,18 @@ def download(
     """
     destination = Path(url.split('/')[-1]) if not destination else destination
 
-    response = requests.get(url, stream=True, timeout=timeout)
-    response.raise_for_status()
+    with httpx.stream(
+        "GET", url, timeout=timeout, follow_redirects=True
+    ) as response:
+        response.raise_for_status()
 
-    total_length = response.headers.get('content-length')
+        total_length = response.headers.get('content-length')
 
-    return DownloadProgressIterable(
-        response.iter_content(chunk_size=chunk_size),
-        destination,
-        total_length,
-    )
+        yield DownloadProgressIterable(
+            response.iter_bytes(chunk_size=chunk_size),
+            destination,
+            total_length,
+        )
 
 
 def _get_next_url(response) -> Optional[str]:
@@ -143,13 +147,19 @@ class GitHubRESTApi:
         params: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, str]] = None,
         request: Optional[Callable] = None,
-    ) -> requests.Response:
+    ) -> httpx.Response:
         headers = {
             "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github.v3+json",
         }
-        request = request or requests.get
-        return request(f"{url}", headers=headers, params=params, json=data)
+        request = request or httpx.get
+        return request(
+            f"{url}",
+            headers=headers,
+            params=params,
+            json=data,
+            follow_redirects=True,
+        )
 
     def _request(
         self,
@@ -158,7 +168,7 @@ class GitHubRESTApi:
         params: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, str]] = None,
         request: Optional[Callable] = None,
-    ) -> requests.Response:
+    ) -> httpx.Response:
         return self._request_internal(
             f"{self.url}{api}", params=params, data=data, request=request
         )
@@ -198,7 +208,7 @@ class GitHubRESTApi:
         """
         api = f"/repos/{repo}/branches/{branch}"
         response = self._request(api)
-        return response.ok
+        return response.is_success
 
     def pull_request_exists(self, repo: str, pull_request: int) -> bool:
         """
@@ -210,7 +220,7 @@ class GitHubRESTApi:
         """
         api = f"/repos/{repo}/pulls/{pull_request}"
         response = self._request(api)
-        return response.ok
+        return response.is_success
 
     def pull_request_commits(
         self, repo: str, pull_request: int
@@ -262,7 +272,7 @@ class GitHubRESTApi:
             "title": title,
             "body": body.replace('\\n', '\n'),
         }
-        response = self._request(api, data=data, request=requests.post)
+        response = self._request(api, data=data, request=httpx.post)
         response.raise_for_status()
 
     def update_pull_request(
@@ -297,7 +307,7 @@ class GitHubRESTApi:
         if body:
             data["body"] = body.replace('\\n', '\n')
 
-        response = self._request(api, data=data, request=requests.post)
+        response = self._request(api, data=data, request=httpx.post)
         response.raise_for_status()
 
     def add_pull_request_comment(
@@ -316,7 +326,7 @@ class GitHubRESTApi:
         """
         api = f"/repos/{repo}/issues/{pull_request}/comments"
         data = {"body": comment}
-        response = self._request(api, data=data, request=requests.post)
+        response = self._request(api, data=data, request=httpx.post)
         response.raise_for_status()
 
     def delete_branch(self, repo: str, branch: str):
@@ -331,7 +341,7 @@ class GitHubRESTApi:
             HTTPError if the request was invalid
         """
         api = f"/repos/{repo}/git/refs/{branch}"
-        response = self._request(api, request=requests.delete)
+        response = self._request(api, request=httpx.delete)
         response.raise_for_status()
 
     def create_release(
@@ -364,7 +374,7 @@ class GitHubRESTApi:
             'prerelease': prerelease,
         }
         api = f"/repos/{repo}/releases"
-        response = self._request(api, data=data, request=requests.post)
+        response = self._request(api, data=data, request=httpx.post)
         response.raise_for_status()
 
     def release_exists(self, repo: str, tag: str) -> bool:
@@ -380,7 +390,7 @@ class GitHubRESTApi:
         """
         api = f"/repos/{repo}/releases/tags/{tag}"
         response = self._request(api)
-        return response.ok
+        return response.is_success
 
     def release(self, repo: str, tag: str) -> Dict[str, str]:
         """
@@ -400,7 +410,7 @@ class GitHubRESTApi:
 
     def download_release_tarball(
         self, repo: str, tag: str, destination: Path
-    ) -> DownloadProgressIterable:
+    ) -> Generator[DownloadProgressIterable, None, None]:
         """
         Download a release tarball (tar.gz) file
 
@@ -417,7 +427,7 @@ class GitHubRESTApi:
 
     def download_release_zip(
         self, repo: str, tag: str, destination: Path
-    ) -> DownloadProgressIterable:
+    ) -> Generator[DownloadProgressIterable, None, None]:
         """
         Download a release zip file
 
@@ -482,7 +492,7 @@ class GitHubRESTApi:
             List of existing labels
         """
         api = f"/repos/{repo}/issues/{issue}/labels"
-        response = self._request(api, request=requests.get)
+        response = self._request(api, request=httpx.get)
         return [f["name"] for f in response.json()]
 
     def set_labels(self, repo: str, issue: int, labels: List[str]):
@@ -497,5 +507,5 @@ class GitHubRESTApi:
         """
         api = f"/repos/{repo}/issues/{issue}/labels"
         data = {"labels": labels}
-        response = self._request(api, data=data, request=requests.post)
+        response = self._request(api, data=data, request=httpx.post)
         response.raise_for_status()

@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+
 from pontos.github.argparser import parse_args
 from pontos.terminal import Terminal, terminal
 
