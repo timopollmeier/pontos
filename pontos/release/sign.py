@@ -108,7 +108,6 @@ def sign(
     )
     github_json = json.loads(response.text)
     zip_progress = download(
-        terminal,
         zipball_url,
         f"{project}-{release_version}.zip",
     )
@@ -119,7 +118,6 @@ def sign(
         f"tags/{git_version}.tar.gz"
     )
     tar_progress = download(
-        terminal,
         tarball_url,
         f"{project}-{release_version}.tar.gz",
     )

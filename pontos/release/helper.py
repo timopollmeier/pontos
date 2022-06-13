@@ -155,7 +155,6 @@ def calculate_calendar_version(terminal: Terminal) -> str:
 
 
 def download(
-    terminal: Terminal,
     url: str,
     filename: str,
     requests_module: requests = requests,
@@ -167,7 +166,6 @@ def download(
     """Download file in url to filename
 
     Arguments:
-        terminal: Terminal to print download info to
         url: The url of the file we want to download
         filename: The name of the file to store the download in
         requests_module: the python request module
@@ -180,8 +178,6 @@ def download(
     destination: Path = path(tempfile.gettempdir()) / filename
     response = requests_module.get(url, stream=True, timeout=timeout)
     total_length = response.headers.get("content-length")
-
-    terminal.info(f"Downloading {url}")
 
     return DownloadProgressIterable(
         content_iterator=response.iter_content(chunk_size=chunk_size),
@@ -216,7 +212,6 @@ def download_assets(
             name: str = asset_json.get("name", "")
             if name.endswith(".zip") or name.endswith(".tar.gz"):
                 yield download(
-                    terminal,
                     asset_url,
                     name,
                     path=path,
