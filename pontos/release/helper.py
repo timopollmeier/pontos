@@ -184,9 +184,10 @@ def download(
     terminal.info(f"Downloading {url}")
 
     return DownloadProgressIterable(
-        response.iter_content(chunk_size=chunk_size),
-        destination,
-        total_length,
+        content_iterator=response.iter_content(chunk_size=chunk_size),
+        url=url,
+        destination=destination,
+        length=total_length,
     )
 
 

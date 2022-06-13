@@ -23,11 +23,17 @@ from typing import Iterable, Iterator, Optional
 
 class DownloadProgressIterable:
     def __init__(
-        self, content_iterator: Iterator, destination: Path, length: int
+        self,
+        *,
+        content_iterator: Iterator,
+        url: str,
+        destination: Path,
+        length: int,
     ):
-        self._length = None if length is None else int(length)
         self._content_iterator = content_iterator
+        self._url = url
         self._destination = destination
+        self._length = None if length is None else int(length)
 
     @property
     def length(self) -> Optional[int]:
@@ -43,6 +49,10 @@ class DownloadProgressIterable:
         Destination path of the to be downloaded file
         """
         return self._destination
+
+    @property
+    def url(self) -> str:
+        return self._url
 
     def _download(self) -> Iterator[Optional[float]]:
         dl = 0

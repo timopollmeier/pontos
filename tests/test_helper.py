@@ -16,12 +16,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, call
 
 from pontos.helper import DownloadProgressIterable
 
 
 class DownloadProgressIterableTestCase(unittest.TestCase):
+    def test_properties(self):
+        content = ["foo", "bar", "baz"]
+        destination = Path("foo")
+        length = 123
+        url = "bar"
+        download_progress = DownloadProgressIterable(
+            content_iterator=content,
+            destination=destination,
+            length=length,
+            url=url,
+        )
+
+        self.assertEqual(download_progress.url, url)
+        self.assertEqual(download_progress.length, length)
+        self.assertEqual(download_progress.destination, destination)
+
     def test_progress_without_length(self):
         content = ["foo", "bar", "baz"]
         destination = MagicMock()
@@ -29,7 +46,14 @@ class DownloadProgressIterableTestCase(unittest.TestCase):
         context_manager = MagicMock()
         context_manager.__enter__.return_value = writer
         destination.open.return_value = context_manager
-        download_progress = DownloadProgressIterable(content, destination, None)
+        download_progress = DownloadProgressIterable(
+            content_iterator=content,
+            destination=destination,
+            length=None,
+            url="foo",
+        )
+
+        self.assertEqual(download_progress.url, "foo")
 
         it = iter(download_progress)
         progress = next(it)
@@ -52,7 +76,12 @@ class DownloadProgressIterableTestCase(unittest.TestCase):
         context_manager = MagicMock()
         context_manager.__enter__.return_value = writer
         destination.open.return_value = context_manager
-        download_progress = DownloadProgressIterable(content, destination, 9)
+        download_progress = DownloadProgressIterable(
+            content_iterator=content,
+            destination=destination,
+            length=9,
+            url="foo",
+        )
 
         it = iter(download_progress)
         progress = next(it)
@@ -75,7 +104,12 @@ class DownloadProgressIterableTestCase(unittest.TestCase):
         context_manager = MagicMock()
         context_manager.__enter__.return_value = writer
         destination.open.return_value = context_manager
-        download_progress = DownloadProgressIterable(content, destination, 9)
+        download_progress = DownloadProgressIterable(
+            content_iterator=content,
+            destination=destination,
+            length=9,
+            url="foo",
+        )
 
         download_progress.run()
         destination.open.assert_called_once()

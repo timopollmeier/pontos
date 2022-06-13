@@ -69,9 +69,10 @@ def download(
     total_length = response.headers.get("content-length")
 
     return DownloadProgressIterable(
-        response.iter_content(chunk_size=chunk_size),
-        destination,
-        total_length,
+        content_iterator=response.iter_content(chunk_size=chunk_size),
+        destination=destination,
+        length=total_length,
+        url=url,
     )
 
 
